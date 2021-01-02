@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 
-#define WIFI_NAME "wifiname"
-#define PASSWORD "pwd"
+#define WIFI_NAME (String)"wifiname"
+#define PASSWORD (String)"pwd"
 
 SoftwareSerial esp8266(2,3); // make RX Arduino line is pin 2, make TX Arduino line is pin 3.
                              // This means that you need to connect the TX line from the esp to the Arduino's pin 2
