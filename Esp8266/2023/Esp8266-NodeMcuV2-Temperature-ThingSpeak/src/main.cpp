@@ -1,32 +1,108 @@
 #include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include "ThingSpeak.h"
+#include "secrets.h"
 #include <DHT.h>
 #include <DHT_U.h>
 
-#ifndef STASSID
-#define STASSID "alabamana"
-#define STAPSK ".ttnet321,"
-#endif
-
 const char *ssid = STASSID;
 const char *password = STAPSK;
-unsigned long myChannelNumber = 1238834;
-const char *myWriteAPIKey = "4A2HPLG8ILYXZXZQ";
-int nextTime = 5 * 1000; // Do this every second or 1000 milliseconds
+unsigned long myChannelNumber = CHANNEL_NUMBER;
+const char *myWriteAPIKey = API_KEY_WRITE;
+int nextTime = 5 * 60 * 1000; // Do this every second or 1000 milliseconds
 unsigned long goTime;
+float temperature = 0, humidity = 0;
 
 #define DHTTYPE DHT11 // DHT 11
-#define DHTPIN 2      // Digital pin connected to the DHT sensor
+#define DHTPIN 4      // Digital pin connected to the DHT sensor
 DHT_Unified dht(DHTPIN, DHTTYPE);
 
 WiFiClient client;
 
+ESP8266WebServer server(80);
+
+// #define DEBUG
+
+void GetTemperatureHumidity()
+{
+    sensors_event_t event;
+
+    dht.temperature().getEvent(&event);
+    if (isnan(event.temperature))
+    {
+        goTime = millis() + nextTime;
+        return;
+    }
+
+    temperature = event.temperature;
+
+    dht.humidity().getEvent(&event);
+    if (isnan(event.relative_humidity))
+    {
+        goTime = millis() + nextTime;
+        return;
+    }
+    humidity = event.relative_humidity;
+
+    #ifdef DEBUG
+    Serial.printf("Temperature: ", temperature);
+    Serial.printf("Humidity: ", humidity);
+    #endif
+}
+
+void handleRoot()
+{
+    GetTemperatureHumidity();
+    String message = "<!DOCTYPE html><html><body>Temperature:";
+    message += temperature;
+    message += " Humidity:";
+    message += humidity;
+    message += "<br><iframe width=""450"" height=""260"" style=""border: 1px solid #cccccc;"" src=""https://thingspeak.com/channels/1238834/charts/3?api_key=";
+    message += API_KEY_WRITE;
+    message += "&bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=400&timescale=10&title=Temperature&type=line""></iframe>";
+    message += "<iframe width=""450"" height=""260"" style=""border: 1px solid #cccccc;"" src=""https://thingspeak.com/channels/1238834/charts/4?api_key=";
+    message += API_KEY_WRITE;
+    message += "&bgcolor=%23ffffff&color=%23d62020&dynamic=false&results=400&timescale=10&title=Humidity&type=line""></iframe>";
+    message += "</body></html>";
+    server.send(200, "text/html", message);
+}
+
+void handleNotFound()
+{
+    String message = "File Not Found\n\n";
+    message += "URI: ";
+    message += server.uri();
+    message += "\nMethod: ";
+    message += (server.method() == HTTP_GET) ? "GET" : "POST";
+    message += "\nArguments: ";
+    message += server.args();
+    message += "\n";
+    for (uint8_t i = 0; i < server.args(); i++)
+    {
+        message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+    }
+    server.send(404, "text/plain", message);
+}
+
+void HandleServer()
+{
+    MDNS.begin("esp8266");
+
+    server.on("/", handleRoot);
+
+    server.onNotFound(handleNotFound);
+
+    server.begin();
+}
+
 void setup()
 {
+#ifdef DEBUG
     Serial.begin(115200);
+#endif
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
@@ -38,55 +114,38 @@ void setup()
     }
 
     // Hostname defaults to esp8266-[ChipID]
-    ArduinoOTA.setHostname("ESP8266-NODEMCUV2-01");
+    ArduinoOTA.setHostname("ESP8266-NODEMCU-01");
 
-    Serial.println("PPP");
-    Serial.println("PPP");
+#ifdef DEBUG
     Serial.println(WiFi.status());
     Serial.println(client.connected());
+#endif
+
     ThingSpeak.begin(client);
 
     ArduinoOTA.begin();
 
+    dht.begin();
+
     goTime = millis();
+
+    HandleServer();
 }
 
 void functionGo()
 {
-    sensors_event_t event;
-    dht.temperature().getEvent(&event);
-    if (isnan(event.temperature))
-    {
-        Serial.println(F("Error reading temperature!"));
-    }
-    else
-    {
-        Serial.print(F("Temperature: "));
-        Serial.print(event.temperature);
-        Serial.println(F("°C"));
-    }
-    // Get humidity event and print its value.
-    dht.humidity().getEvent(&event);
-    if (isnan(event.relative_humidity))
-    {
-        Serial.println(F("Error reading humidity!"));
-    }
-    else
-    {
-        Serial.print(F("Humidity: "));
-        Serial.print(event.relative_humidity);
-        Serial.println(F("%"));
-    }
-
-    ThingSpeak.setField(1, 15);
-    ThingSpeak.setField(2, 25);
-    Serial.println(ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey));
+    GetTemperatureHumidity();
+    ThingSpeak.setField(3, temperature);
+    ThingSpeak.setField(4, humidity);
+    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
     goTime = millis() + nextTime;
 }
 
 void loop()
 {
     ArduinoOTA.handle();
+    server.handleClient();
+    MDNS.update();
     if (millis() >= goTime)
         functionGo();
 }

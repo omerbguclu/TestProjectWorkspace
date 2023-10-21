@@ -1,0 +1,1 @@
+C:\Users\OmerXPro\AppData\Local\Arduino15\packages\esp8266\tools\python3\3.7.2-post1/python3 -I C:\Users\OmerXPro\AppData\Local\Arduino15\packages\esp8266\hardware\esp8266\3.0.2/tools/espota.py -i 192.168.1.104 -p 8266 --auth= -f C:\Users\OmerXPro\Desktop\Workspace\Arduino\TestProjectWorkspace\Esp8266\2023\Esp8266-NodeMcuV2-Temperature-ThingSpeak\.pio\build\nodemcuv2\firmware.bin
