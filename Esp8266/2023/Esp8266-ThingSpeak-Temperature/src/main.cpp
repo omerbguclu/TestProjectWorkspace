@@ -84,7 +84,7 @@ void handleNotFound()
 
 void HandleServer()
 {
-    MDNS.begin("esp8266");
+    MDNS.begin(DEVICE_HOSTNAME);
 
     server.on("/", handleRoot);
 
@@ -99,6 +99,9 @@ void setup()
     Serial.begin(115200);
 #endif
 
+    WiFi.disconnect(true);
+    WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
+    WiFi.setHostname(DEVICE_HOSTNAME);
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     while (WiFi.waitForConnectResult() != WL_CONNECTED)
@@ -109,7 +112,7 @@ void setup()
     }
 
     // Hostname defaults to esp8266-[ChipID]
-    ArduinoOTA.setHostname("ESP8266-01");
+    // ArduinoOTA.setHostname("ESP8266-01");
 
 #ifdef DEBUG
     Serial.println(WiFi.status());

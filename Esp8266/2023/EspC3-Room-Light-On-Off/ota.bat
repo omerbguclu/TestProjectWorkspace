@@ -1,0 +1,1 @@
+C:\Users\OmerXPro\AppData\Local\Arduino15\packages\esp8266\tools\python3\3.7.2-post1/python3 -I C:\Users\OmerXPro\AppData\Local\Arduino15\packages\esp8266\hardware\esp8266\3.0.2/tools/espota.py -i ESP32C3-01.local -p 3232 --auth= -f C:\Users\OmerXPro\Desktop\Workspace\Arduino\TestProjectWorkspace\Esp8266\2023\EspC3-Room-Light-On-Off\.pio\build\esp32-c3-devkitc-02\firmware.bin
